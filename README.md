@@ -1,3 +1,9 @@
+# FieldNotes
+
+FieldNotes is a script editor that lets you write your screenplay, add tags, and break down scenes in a simple and organized way.
+
+## Table Of Contents
+
 **Getting Started**:
 
 *Open Command Prompt
@@ -23,7 +29,3 @@ http://localhost:5173
 Open that in your browser.
 
 
-
-**About**
-
-FieldNotes is a script editor that lets you write your screenplay, add tags, and break down scenes in a simple and organized way.
