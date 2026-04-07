@@ -11,20 +11,17 @@ FieldNotes is a script editor that lets you write your screenplay, add tags, and
 - git clone https://github.com/Rueote/FieldNotes.git
 
 Go into the project folder:
-
-cd FieldNotes
+- cd FieldNotes
 
 Install everything the project needs:
-
-npm install
+- npm install
 
 Start the app:
+- npm run dev
 
-npm run dev
+- When it finishes, it will show a link like:
 
-When it finishes, it will show a link like:
-
-http://localhost:5173
+- http://localhost:5173
 
 Open that in your browser.
 
