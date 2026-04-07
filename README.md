@@ -1,3 +1,1 @@
-# Welcome to your Lovable project
-
-TODO: Document your project here
+just a script editor im working on, you can tag and properly breakdown your script 
