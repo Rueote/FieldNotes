@@ -21,7 +21,7 @@ Start the app:
 
 - When it finishes, it will show a link like:
 
-- http://localhost:5173
+- (http://localhost:8080/)
 
 Open that in your browser.
 
