@@ -43,6 +43,11 @@
     --breakdown-bg: 220 18% 97%;
     --scene-heading: 220 70% 45%;
     --label-highlight: 45 100% 85%;
+
+    /* Custom theme overrides (set by settings panel) */
+    --custom-bg: ;
+    --custom-paper: ;
+    --custom-toolbar: ;
   }
 
   .dark {
@@ -119,6 +124,7 @@
   margin: 0;
   color: inherit;
   display: block;
+  box-sizing: border-box;
 }
 
 .screenplay-line::placeholder {
@@ -136,22 +142,34 @@
   margin-top: 1em;
 }
 
+/*
+  Industry-standard screenplay formatting:
+  The "page" is 6in wide (8.5in - 1.5in left - 1in right).
+  Character names sit 2.2in from the left margin (i.e. ~37% of 6in).
+  Dialogue block is 1.5in from left margin, 1.5in from right (~25%/25%).
+  Parentheticals are 1.6in from left, 1.9in from right.
+  All measured from the left margin of the text area (not the page edge).
+*/
+
 .screenplay-line.character {
   text-transform: uppercase;
-  text-align: center;
   margin-top: 1em;
-  padding-left: 35%;
-  padding-right: 15%;
+  /* 2.2in of 6in usable width ≈ 36.6% */
+  padding-left: 37%;
+  padding-right: 0;
+  text-align: left;
 }
 
 .screenplay-line.dialogue {
-  padding-left: 15%;
-  padding-right: 15%;
+  /* 1.5in left / 1.5in right of 6in usable = 25% each */
+  padding-left: 25%;
+  padding-right: 25%;
 }
 
 .screenplay-line.parenthetical {
-  padding-left: 25%;
-  padding-right: 25%;
+  /* 1.6in left / 1.9in right */
+  padding-left: 27%;
+  padding-right: 32%;
 }
 
 .screenplay-line.transition {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Project } from '@/types/screenplay';
-import { FilePlus, FileText, Trash2, Clock } from 'lucide-react';
+import { FilePlus, FileText, Trash2, Clock, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -28,27 +28,76 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
     onOpenProject(p);
   };
 
+  // Export ALL projects to a single .json backup file
+  const handleExportAll = () => {
+    if (projects.length === 0) {
+      toast({ title: 'Nothing to export', description: 'Create a project first.' });
+      return;
+    }
+    const json = JSON.stringify(projects, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scriptsmith-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Exported', description: `${projects.length} project(s) saved to file.` });
+  };
+
+  // Export a single project
+  const handleExportProject = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    const json = JSON.stringify(project, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Exported', description: `"${project.name}" saved to file.` });
+  };
+
   const handleImport = async () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.pdf,.fdx,.kitsp,.fountain,.txt';
+    input.accept = '.pdf,.fdx,.kitsp,.fountain,.txt,.json';
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
 
+      // Handle JSON backup files (single project or array of projects)
+      if (file.name.endsWith('.json')) {
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          // Could be a single project or an array
+          const projectsToImport: Project[] = Array.isArray(parsed) ? parsed : [parsed];
+          projectsToImport.forEach(p => onImportProject(p));
+          toast({
+            title: 'Imported',
+            description: `Loaded ${projectsToImport.length} project(s) from backup.`,
+          });
+          // Open the first one
+          if (projectsToImport.length === 1) onOpenProject(projectsToImport[0]);
+        } catch {
+          toast({ title: 'Import failed', description: 'Invalid JSON file.', variant: 'destructive' });
+        }
+        return;
+      }
+
+      // Handle screenplay format files
       try {
         const result = await importFile(file);
         const name = file.name.replace(/\.[^/.]+$/, '');
 
         if (result.project) {
-          // Full project import (kitsp)
           onImportProject(result.project);
           onOpenProject(result.project);
           toast({ title: 'Imported', description: `Loaded project "${result.project.name}"` });
         } else if (result.lines) {
-          // Lines-only import
           const p = onNewProject(name);
-          // We need to update the project lines
           const updatedProject = { ...p, lines: result.lines };
           onImportProject(updatedProject);
           onOpenProject(updatedProject);
@@ -69,7 +118,7 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
           <p className="text-muted-foreground text-lg">Professional screenplay editor & breakdown tool</p>
         </div>
 
-        <div className="flex gap-3 justify-center mb-12">
+        <div className="flex gap-3 justify-center mb-12 flex-wrap">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="lg" className="gap-2">
@@ -97,8 +146,13 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
           </Dialog>
 
           <Button variant="outline" size="lg" className="gap-2" onClick={handleImport}>
-            <FileText className="w-5 h-5" />
-            Import Script
+            <Upload className="w-5 h-5" />
+            Import
+          </Button>
+
+          <Button variant="outline" size="lg" className="gap-2" onClick={handleExportAll}>
+            <Download className="w-5 h-5" />
+            Export All
           </Button>
         </div>
 
@@ -123,14 +177,26 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                    onClick={e => { e.stopPropagation(); onDeleteProject(p.id); }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={e => handleExportProject(e, p)}
+                      title="Export project"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={e => { e.stopPropagation(); onDeleteProject(p.id); }}
+                      title="Delete project"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
           </div>
