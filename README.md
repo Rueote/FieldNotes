@@ -4,11 +4,11 @@ FieldNotes is a script editor that lets you write your screenplay, add tags, and
 
 ## Table Of Contents
 
-**Getting Started**:
 
-*Open Command Prompt
-*Copy and paste this, then press Enter:
-*git clone https://github.com/Rueote/FieldNotes.git
+
+- Open Command Prompt
+- Copy and paste this, then press Enter:
+- git clone https://github.com/Rueote/FieldNotes.git
 
 Go into the project folder:
 
