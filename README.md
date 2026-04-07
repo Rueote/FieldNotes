@@ -1,16 +1,8 @@
 **Getting Started**:
 
-Open Command Prompt
-
-Press the Start button
-
-Type cmd
-
-Click Command Prompt
-
-Copy and paste this, then press Enter:
-
-git clone https://github.com/Rueote/FieldNotes.git
+*Open Command Prompt
+*Copy and paste this, then press Enter:
+*git clone https://github.com/Rueote/FieldNotes.git
 
 Go into the project folder:
 
