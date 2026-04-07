@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-just a script editor im working on, you can tag and properly breakdown your script 
-=======
 # FieldNotes
 
 FieldNotes is a script editor that lets you write your screenplay, add tags, and break down scenes in a simple and organized way.
@@ -29,4 +26,4 @@ Start the app:
 Open that in your browser.
 
 
->>>>>>> 72d9126b10c2b130f3b35cb92fb703631ef7bdb8
+
