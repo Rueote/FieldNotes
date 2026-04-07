@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { importFile } from '@/lib/screenplayImport';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/hooks/useTheme';
 
 interface HomeScreenProps {
   projects: Project[];
@@ -15,10 +16,17 @@ interface HomeScreenProps {
   onImportProject: (project: Project) => void;
 }
 
-export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProject, onImportProject }: HomeScreenProps) {
+export function HomeScreen({
+  projects,
+  onNewProject,
+  onOpenProject,
+  onDeleteProject,
+  onImportProject
+}: HomeScreenProps) {
   const [newName, setNewName] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { colors } = useTheme();
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -28,7 +36,6 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
     onOpenProject(p);
   };
 
-  // Export ALL projects to a single .json backup file
   const handleExportAll = () => {
     if (projects.length === 0) {
       toast({ title: 'Nothing to export', description: 'Create a project first.' });
@@ -45,7 +52,6 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
     toast({ title: 'Exported', description: `${projects.length} project(s) saved to file.` });
   };
 
-  // Export a single project
   const handleExportProject = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     const json = JSON.stringify(project, null, 2);
@@ -63,23 +69,24 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf,.fdx,.kitsp,.fountain,.txt,.json';
+
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
 
-      // Handle JSON backup files (single project or array of projects)
       if (file.name.endsWith('.json')) {
         try {
           const text = await file.text();
           const parsed = JSON.parse(text);
-          // Could be a single project or an array
           const projectsToImport: Project[] = Array.isArray(parsed) ? parsed : [parsed];
+
           projectsToImport.forEach(p => onImportProject(p));
+
           toast({
             title: 'Imported',
             description: `Loaded ${projectsToImport.length} project(s) from backup.`,
           });
-          // Open the first one
+
           if (projectsToImport.length === 1) onOpenProject(projectsToImport[0]);
         } catch {
           toast({ title: 'Import failed', description: 'Invalid JSON file.', variant: 'destructive' });
@@ -87,7 +94,6 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
         return;
       }
 
-      // Handle screenplay format files
       try {
         const result = await importFile(file);
         const name = file.name.replace(/\.[^/.]+$/, '');
@@ -103,19 +109,30 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
           onOpenProject(updatedProject);
           toast({ title: 'Imported', description: `Parsed ${result.lines.length} lines from "${file.name}"` });
         }
-      } catch (err) {
+      } catch {
         toast({ title: 'Import failed', description: 'Could not parse the file.', variant: 'destructive' });
       }
     };
+
     input.click();
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center pt-20 px-4">
-      <div className="max-w-2xl w-full animate-fade-in">
+    <div
+      className="min-h-screen flex flex-col items-center pt-20 px-4"
+      style={{ backgroundColor: colors.bg }}
+    >
+      <div
+        className="max-w-2xl w-full animate-fade-in"
+        style={{ backgroundColor: colors.paper }}
+      >
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2">ScriptCraft</h1>
-          <p className="text-muted-foreground text-lg">Professional screenplay editor & breakdown tool</p>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2">
+            FieldNotes
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Professional screenplay editor & breakdown tool
+          </p>
         </div>
 
         <div className="flex gap-3 justify-center mb-12 flex-wrap">
@@ -126,10 +143,12 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
                 New Project
               </Button>
             </DialogTrigger>
+
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>New Project</DialogTitle>
               </DialogHeader>
+
               <div className="space-y-4 pt-2">
                 <Input
                   placeholder="Project title..."
@@ -158,7 +177,10 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
 
         {projects.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Recent Projects</h2>
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+              Recent Projects
+            </h2>
+
             {projects
               .sort((a, b) => b.updatedAt - a.updatedAt)
               .map(p => (
@@ -177,21 +199,25 @@ export function HomeScreen({ projects, onNewProject, onOpenProject, onDeleteProj
                       </div>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-muted-foreground hover:text-foreground"
                       onClick={e => handleExportProject(e, p)}
                       title="Export project"
                     >
                       <Download className="w-4 h-4" />
                     </Button>
+
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={e => { e.stopPropagation(); onDeleteProject(p.id); }}
+                      className="text-destructive"
+                      onClick={e => {
+                        e.stopPropagation();
+                        onDeleteProject(p.id);
+                      }}
                       title="Delete project"
                     >
                       <Trash2 className="w-4 h-4" />

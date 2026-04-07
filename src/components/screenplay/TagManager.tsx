@@ -18,16 +18,46 @@ const PRESET_COLORS = ['#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#22c55e', '#
 export function TagManager({ tags, onAddTag, onUpdateTag, onRemoveTag }: TagManagerProps) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
+  const [error, setError] = useState('');
+
+  const isDuplicate = (name: string, ignoreId?: string) => {
+    return tags.some(
+      t =>
+        t.name.toLowerCase() === name.toLowerCase() &&
+        t.id !== ignoreId
+    );
+  };
 
   const handleAdd = () => {
-    if (!newName.trim()) return;
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+
+    if (isDuplicate(trimmed)) {
+      setError('Tag already exists');
+      return;
+    }
+
     onAddTag({
       id: crypto.randomUUID(),
-      name: newName.trim(),
+      name: trimmed,
       color: newColor,
-      category: newName.trim(),
+      category: trimmed,
     });
+
     setNewName('');
+    setError('');
+  };
+
+  const handleRename = (id: string, value: string) => {
+    const trimmed = value.trim();
+
+    if (isDuplicate(trimmed, id)) {
+      setError('Tag already exists');
+      return;
+    }
+
+    setError('');
+    onUpdateTag(id, { name: trimmed });
   };
 
   return (
@@ -38,10 +68,12 @@ export function TagManager({ tags, onAddTag, onUpdateTag, onRemoveTag }: TagMana
           Tags
         </Button>
       </DialogTrigger>
+
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Manage Tags</DialogTitle>
         </DialogHeader>
+
         <ScrollArea className="max-h-[300px]">
           <div className="space-y-2">
             {tags.map(tag => (
@@ -52,31 +84,60 @@ export function TagManager({ tags, onAddTag, onUpdateTag, onRemoveTag }: TagMana
                   onChange={e => onUpdateTag(tag.id, { color: e.target.value })}
                   className="w-6 h-6 rounded cursor-pointer border-0"
                 />
+
                 <Input
                   value={tag.name}
-                  onChange={e => onUpdateTag(tag.id, { name: e.target.value })}
+                  onChange={e => handleRename(tag.id, e.target.value)}
                   className="h-8 text-sm flex-1"
                 />
-                <Button variant="ghost" size="sm" onClick={() => onRemoveTag(tag.id)} className="text-destructive h-8 w-8 p-0">
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemoveTag(tag.id)}
+                  className="text-destructive h-8 w-8 p-0"
+                >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
             ))}
           </div>
         </ScrollArea>
+
         <div className="flex items-center gap-2 pt-2 border-t border-border">
-          <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} className="w-6 h-6 rounded cursor-pointer border-0" />
+          <input
+            type="color"
+            value={newColor}
+            onChange={e => setNewColor(e.target.value)}
+            className="w-6 h-6 rounded cursor-pointer border-0"
+          />
+
           <Input
             value={newName}
-            onChange={e => setNewName(e.target.value)}
+            onChange={e => {
+              setNewName(e.target.value);
+              if (error) setError('');
+            }}
             placeholder="New tag name..."
             className="h-8 text-sm flex-1"
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
-          <Button size="sm" onClick={handleAdd} disabled={!newName.trim()} className="h-8">
+
+          <Button
+            size="sm"
+            onClick={handleAdd}
+            disabled={!newName.trim()}
+            className="h-8"
+          >
             <Plus className="w-3.5 h-3.5" />
           </Button>
         </div>
+
+        {error && (
+          <p className="text-xs text-red-500 pt-1">
+            {error}
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );
