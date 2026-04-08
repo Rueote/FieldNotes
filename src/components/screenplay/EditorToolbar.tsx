@@ -1,6 +1,6 @@
 import { LineType } from '@/types/screenplay';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Hash, FileText, Eye, Edit3, Download, Settings, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Hash, FileText, Eye, Edit3, Download, Settings, RotateCcw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -15,18 +15,8 @@ import {
 } from '@/components/ui/popover';
 import { useTheme } from '@/hooks/useTheme';
 
-const LINE_TYPES: { type: LineType; label: string; shortcut: string }[] = [
-  { type: 'scene-heading', label: 'Scene', shortcut: '1' },
-  { type: 'action', label: 'Action', shortcut: '2' },
-  { type: 'character', label: 'Character', shortcut: '3' },
-  { type: 'dialogue', label: 'Dialogue', shortcut: '4' },
-  { type: 'parenthetical', label: 'Paren', shortcut: '5' },
-  { type: 'transition', label: 'Transition', shortcut: '6' },
-];
-
 interface EditorToolbarProps {
   currentLineType: LineType;
-  onChangeLineType: (type: LineType) => void;
   mode: 'script' | 'labelling';
   onModeChange: (mode: 'script' | 'labelling') => void;
   showSceneNumbers: boolean;
@@ -36,40 +26,39 @@ interface EditorToolbarProps {
   onExportPDF: () => void;
   onExportFDX: () => void;
   projectName: string;
+  searchOpen: boolean;
+  onToggleSearch: () => void;
 }
 
 interface ColorRowProps {
   label: string;
+  description: string;
   value: string;
   onChange: (val: string) => void;
-  preview?: string;
 }
 
-function ColorRow({ label, value, onChange, preview }: ColorRowProps) {
+function ColorRow({ label, description, value, onChange }: ColorRowProps) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-sm text-foreground w-20">{label}</span>
-      <div className="flex items-center gap-2">
-        <div
-          className="w-6 h-6 rounded border border-border shadow-sm"
-          style={{ backgroundColor: value }}
-        />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs opacity-60">{description}</div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="w-6 h-6 rounded border border-white/20 shadow-sm" style={{ backgroundColor: value }} />
         <input
           type="color"
           value={value}
           onChange={e => onChange(e.target.value)}
           className="w-8 h-8 cursor-pointer rounded border-0 bg-transparent p-0"
-          title={label}
         />
-        <span className="text-xs text-muted-foreground font-mono w-16">{value}</span>
+        <span className="text-xs opacity-50 font-mono w-16">{value}</span>
       </div>
     </div>
   );
 }
 
 export function EditorToolbar({
-  currentLineType,
-  onChangeLineType,
   mode,
   onModeChange,
   showSceneNumbers,
@@ -79,6 +68,8 @@ export function EditorToolbar({
   onExportPDF,
   onExportFDX,
   projectName,
+  searchOpen,
+  onToggleSearch,
 }: EditorToolbarProps) {
   const { colors, updateColor, reset } = useTheme();
 
@@ -88,7 +79,7 @@ export function EditorToolbar({
         <ArrowLeft className="w-4 h-4" />
       </Button>
 
-      <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{projectName}</span>
+      <span className="text-sm font-medium truncate max-w-[200px]">{projectName}</span>
 
       <div className="h-5 w-px bg-border mx-2" />
 
@@ -113,29 +104,17 @@ export function EditorToolbar({
         </Button>
       </div>
 
-      <div className="h-5 w-px bg-border mx-2" />
-
-      {mode === 'script' && (
-        <div className="flex items-center gap-0.5">
-          {LINE_TYPES.map(lt => (
-            <Button
-              key={lt.type}
-              variant="ghost"
-              size="sm"
-              onClick={() => onChangeLineType(lt.type)}
-              className={cn(
-                'text-xs px-2 h-7',
-                currentLineType === lt.type && 'bg-accent text-accent-foreground'
-              )}
-              title={`${lt.label} (Ctrl+${lt.shortcut})`}
-            >
-              {lt.label}
-            </Button>
-          ))}
-        </div>
-      )}
-
       <div className="ml-auto flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleSearch}
+          title="Search (Ctrl+F)"
+          className={cn('text-xs gap-1', searchOpen && 'bg-accent text-accent-foreground')}
+        >
+          <Search className="w-3.5 h-3.5" />
+        </Button>
+
         <Button
           variant="ghost"
           size="sm"
@@ -164,50 +143,27 @@ export function EditorToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Settings */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" title="Appearance settings">
+            <Button variant="ghost" size="sm" title="Appearance">
               <Settings className="w-3.5 h-3.5" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72">
+          <PopoverContent align="end" className="w-80 bg-toolbar-bg border-border">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Appearance</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={reset}
-                  className="text-xs text-muted-foreground gap-1 h-7"
-                  title="Reset to defaults"
-                >
+                <Button variant="ghost" size="sm" onClick={reset} className="text-xs opacity-60 gap-1 h-7">
                   <RotateCcw className="w-3 h-3" />
                   Reset
                 </Button>
               </div>
-
               <div className="space-y-3">
-                <ColorRow
-                  label="Background"
-                  value={colors.bg}
-                  onChange={val => updateColor('bg', val)}
-                />
-                <ColorRow
-                  label="Paper"
-                  value={colors.paper}
-                  onChange={val => updateColor('paper', val)}
-                />
-                <ColorRow
-                  label="Toolbar"
-                  value={colors.toolbar}
-                  onChange={val => updateColor('toolbar', val)}
-                />
+                <ColorRow label="Background" description="Area behind the script page" value={colors.bg} onChange={val => updateColor('bg', val)} />
+                <ColorRow label="Paper" description="The script page itself" value={colors.paper} onChange={val => updateColor('paper', val)} />
+                <ColorRow label="Menus" description="Toolbar, scene list & breakdown panel" value={colors.ui} onChange={val => updateColor('ui', val)} />
               </div>
-
-              <p className="text-xs text-muted-foreground">
-                Changes apply instantly and are saved automatically.
-              </p>
+              <p className="text-xs opacity-50">Text colour adjusts automatically based on brightness.</p>
             </div>
           </PopoverContent>
         </Popover>

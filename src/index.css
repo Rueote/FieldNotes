@@ -41,13 +41,7 @@
     --editor-gutter: 220 15% 94%;
     --toolbar-bg: 220 18% 96%;
     --breakdown-bg: 220 18% 97%;
-    --scene-heading: 220 70% 45%;
     --label-highlight: 45 100% 85%;
-
-    /* Custom theme overrides (set by settings panel) */
-    --custom-bg: ;
-    --custom-paper: ;
-    --custom-toolbar: ;
   }
 
   .dark {
@@ -85,22 +79,19 @@
     --editor-gutter: 225 20% 14%;
     --toolbar-bg: 225 22% 10%;
     --breakdown-bg: 225 25% 9%;
-    --scene-heading: 215 80% 60%;
     --label-highlight: 45 80% 30%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
-/* Screenplay page - industry standard margins */
+/* ── Screenplay page ── */
 .screenplay-page {
   max-width: 8.5in;
   padding-left: 1.5in;
@@ -109,7 +100,7 @@
   padding-bottom: 1in;
 }
 
-/* Screenplay editor typography - textarea based */
+/* ── Base line ── */
 .screenplay-line {
   font-family: 'Courier New', Courier, monospace;
   font-size: 12pt;
@@ -127,114 +118,114 @@
   box-sizing: border-box;
 }
 
+/* No placeholder on any line — user knows what they're doing */
 .screenplay-line::placeholder {
-  color: hsl(var(--muted-foreground) / 0.4);
+  color: transparent;
 }
 
+/* ── Scene heading: always white/inherit, never blue ── */
 .screenplay-line.scene-heading {
   text-transform: uppercase;
   font-weight: bold;
   margin-top: 2em;
-  color: hsl(var(--scene-heading));
+  /* colour set by paper text via theme, not overridden here */
 }
 
 .screenplay-line.action {
   margin-top: 1em;
 }
 
-/*
-  Industry-standard screenplay formatting:
-  The "page" is 6in wide (8.5in - 1.5in left - 1in right).
-  Character names sit 2.2in from the left margin (i.e. ~37% of 6in).
-  Dialogue block is 1.5in from left margin, 1.5in from right (~25%/25%).
-  Parentheticals are 1.6in from left, 1.9in from right.
-  All measured from the left margin of the text area (not the page edge).
-*/
-
+/* ── Character: 37% from left margin (2.2in of 6in usable) ── */
 .screenplay-line.character {
   text-transform: uppercase;
   margin-top: 1em;
-  /* 2.2in of 6in usable width ≈ 36.6% */
   padding-left: 37%;
   padding-right: 0;
   text-align: left;
 }
 
+/* ── Dialogue: centred block 25%/25% ── */
 .screenplay-line.dialogue {
-  /* 1.5in left / 1.5in right of 6in usable = 25% each */
   padding-left: 25%;
   padding-right: 25%;
 }
 
+/* ── Parenthetical ── */
 .screenplay-line.parenthetical {
-  /* 1.6in left / 1.9in right */
   padding-left: 27%;
   padding-right: 32%;
 }
 
+/* ── Transition ── */
 .screenplay-line.transition {
   text-transform: uppercase;
   text-align: right;
   margin-top: 1em;
 }
 
-/* Label highlighting */
+/* ── Non-printable ── */
+.screenplay-line.non-printable {
+  font-style: italic;
+  opacity: 0.5;
+  margin-top: 0.5em;
+}
+
+/* ── Lyrics ── */
+.screenplay-line.lyrics {
+  font-style: italic;
+  padding-left: 15%;
+  padding-right: 15%;
+  margin-top: 0.5em;
+}
+
+/* ── Page break gap ── */
+.page-break-gap {
+  height: 2.5em;
+  margin: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Label highlighting ── */
 .label-highlight {
   border-radius: 2px;
   padding: 1px 2px;
   cursor: pointer;
   transition: opacity 0.15s;
 }
+.label-highlight:hover { opacity: 0.8; }
 
-.label-highlight:hover {
-  opacity: 0.8;
-}
-
-/* Word selection in labelling mode */
 .labelling-word {
   cursor: pointer;
   border-radius: 2px;
   padding: 0 1px;
   transition: background-color 0.1s;
 }
-
-.labelling-word:hover {
-  background-color: hsl(var(--accent));
-}
-
+.labelling-word:hover { background-color: hsl(var(--accent)); }
 .labelling-word.selected {
   background-color: hsl(var(--primary) / 0.25);
   outline: 1px solid hsl(var(--primary) / 0.5);
 }
 
-/* Flash highlight for scene navigation */
+/* ── Flash highlight ── */
 @keyframes flash-highlight {
-  0% { background-color: hsl(var(--primary) / 0.3); }
-  50% { background-color: hsl(var(--primary) / 0.15); }
+  0%   { background-color: hsl(var(--primary) / 0.3); }
+  50%  { background-color: hsl(var(--primary) / 0.15); }
   100% { background-color: transparent; }
 }
+.animate-flash-highlight { animation: flash-highlight 1.2s ease-out; }
 
-.animate-flash-highlight {
-  animation: flash-highlight 1.2s ease-out;
-}
-
-/* Fade in animation */
+/* ── Fade in ── */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-/* Scrollbar styling */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ── Scrollbar ── */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: hsl(var(--muted-foreground) / 0.3);
   border-radius: 3px;
