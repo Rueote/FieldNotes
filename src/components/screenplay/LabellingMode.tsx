@@ -20,6 +20,16 @@ interface SelectedWord {
   word: string;
 }
 
+// Strip punctuation, collapse whitespace, uppercase for consistent storage
+function normaliseText(raw: string): string {
+  return raw
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, c => c.toUpperCase());
+}
+
 export function LabellingMode({ lines, labels, tags, showSceneNumbers, onAddLabel, onRemoveLabel }: LabellingModeProps) {
   const [selectedWords, setSelectedWords] = useState<SelectedWord[]>([]);
   const [activeTagId, setActiveTagId] = useState<string>(tags[0]?.id || '');
@@ -39,7 +49,11 @@ export function LabellingMode({ lines, labels, tags, showSceneNumbers, onAddLabe
     const sameLineWords = selectedWords.filter(w => w.lineId === lineId);
     if (sameLineWords.length === 0) return;
 
-    const text = sameLineWords.sort((a, b) => a.wordIndex - b.wordIndex).map(w => w.word).join(' ');
+    const rawText = sameLineWords
+      .sort((a, b) => a.wordIndex - b.wordIndex)
+      .map(w => w.word)
+      .join(' ');
+
     const indices = sameLineWords.map(w => w.wordIndex).sort((a, b) => a - b);
 
     const label: Label = {
@@ -47,9 +61,10 @@ export function LabellingMode({ lines, labels, tags, showSceneNumbers, onAddLabe
       lineId,
       startIndex: indices[0],
       endIndex: indices[indices.length - 1],
-      text,
+      text: normaliseText(rawText), // clean text, no punctuation
       tagId: activeTagId,
     };
+
     onAddLabel(label);
     setSelectedWords([]);
   }, [selectedWords, activeTagId, onAddLabel]);
@@ -123,7 +138,8 @@ export function LabellingMode({ lines, labels, tags, showSceneNumbers, onAddLabe
                           className={cn('labelling-word', isSelected && 'selected')}
                           style={tag ? { backgroundColor: `${tag.color}33`, borderBottom: `2px solid ${tag.color}` } : undefined}
                           onClick={e => handleWordClick(line.id, wi, word, e.ctrlKey || e.metaKey)}
-                          title={tag ? `${tag.name}: ${matchingLabel!.text}` : undefined}
+                          onContextMenu={e => { if (matchingLabel) { e.preventDefault(); onRemoveLabel(matchingLabel.id); } }}
+                          title={tag ? `${tag.name}: ${matchingLabel!.text} • Right-click to remove` : undefined}
                         >
                           {word}
                         </span>

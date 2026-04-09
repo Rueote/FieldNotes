@@ -13,6 +13,16 @@ interface BreakdownPanelProps {
   onScrollToLine: (lineId: string) => void;
 }
 
+// Normalise for deduplication display — matches the logic in LabellingMode
+function normaliseText(raw: string): string {
+  return raw
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, c => c.toUpperCase());
+}
+
 export function BreakdownPanel({ lines, labels, tags, onRemoveLabel, onScrollToLine }: BreakdownPanelProps) {
   const tagMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
   const scenes = useMemo(() => getScenes(lines), [lines]);
@@ -86,15 +96,25 @@ export function BreakdownPanel({ lines, labels, tags, onRemoveLabel, onScrollToL
                   {Array.from(byTag.entries()).map(([tagId, tagLabels]) => {
                     const tag = tagMap.get(tagId);
                     if (!tag) return null;
+
+                    // Deduplicate by normalised text — keep the first occurrence of each unique value
+                    const seen = new Set<string>();
+                    const uniqueLabels = tagLabels.filter(l => {
+                      const key = normaliseText(l.text);
+                      if (seen.has(key)) return false;
+                      seen.add(key);
+                      return true;
+                    });
+
                     return (
                       <div key={tagId} className="pl-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
                           <span className="text-xs font-medium text-foreground">{tag.name}</span>
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1">{tagLabels.length}</Badge>
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1">{uniqueLabels.length}</Badge>
                         </div>
                         <div className="flex flex-wrap gap-1 pl-4">
-                          {tagLabels.map(l => (
+                          {uniqueLabels.map(l => (
                             <span
                               key={l.id}
                               className="text-xs px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity"
@@ -120,7 +140,15 @@ export function BreakdownPanel({ lines, labels, tags, onRemoveLabel, onScrollToL
         <div className="border-t border-border pt-4 mt-4">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Summary</h4>
           {tags.map(tag => {
-            const count = labels.filter(l => l.tagId === tag.id).length;
+            // Count unique normalised values per tag across the whole script
+            const seen = new Set<string>();
+            const count = labels.filter(l => {
+              if (l.tagId !== tag.id) return false;
+              const key = normaliseText(l.text);
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            }).length;
             if (count === 0) return null;
             return (
               <div key={tag.id} className="flex items-center justify-between py-1">

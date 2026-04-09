@@ -15,33 +15,43 @@ interface TagManagerProps {
 
 const PRESET_COLORS = ['#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#22c55e', '#ec4899', '#f97316', '#a855f7', '#eab308', '#3b82f6'];
 
+// Strip punctuation and collapse whitespace — keeps tag names clean
+function normaliseTagName(raw: string): string {
+  return raw
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, c => c.toUpperCase());
+}
+
 export function TagManager({ tags, onAddTag, onUpdateTag, onRemoveTag }: TagManagerProps) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   const [error, setError] = useState('');
 
-  const isDuplicate = (name: string, ignoreId?: string) => {
+  const isDuplicate = (normalisedName: string, ignoreId?: string) => {
     return tags.some(
       t =>
-        t.name.toLowerCase() === name.toLowerCase() &&
+        normaliseTagName(t.name) === normalisedName &&
         t.id !== ignoreId
     );
   };
 
   const handleAdd = () => {
-    const trimmed = newName.trim();
-    if (!trimmed) return;
+    const normalisedName = normaliseTagName(newName);
+    if (!normalisedName) return;
 
-    if (isDuplicate(trimmed)) {
+    if (isDuplicate(normalisedName)) {
       setError('Tag already exists');
       return;
     }
 
     onAddTag({
       id: crypto.randomUUID(),
-      name: trimmed,
+      name: normalisedName,
       color: newColor,
-      category: trimmed,
+      category: normalisedName,
     });
 
     setNewName('');
@@ -49,15 +59,16 @@ export function TagManager({ tags, onAddTag, onUpdateTag, onRemoveTag }: TagMana
   };
 
   const handleRename = (id: string, value: string) => {
-    const trimmed = value.trim();
+    const normalisedName = normaliseTagName(value);
+    if (!normalisedName) return;
 
-    if (isDuplicate(trimmed, id)) {
+    if (isDuplicate(normalisedName, id)) {
       setError('Tag already exists');
       return;
     }
 
     setError('');
-    onUpdateTag(id, { name: trimmed });
+    onUpdateTag(id, { name: normalisedName });
   };
 
   return (
