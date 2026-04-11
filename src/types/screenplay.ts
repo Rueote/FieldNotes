@@ -1,4 +1,12 @@
-export type LineType = 'scene-heading' | 'action' | 'character' | 'dialogue' | 'parenthetical' | 'transition' | 'non-printable' | 'lyrics';
+export type LineType =
+  | 'scene-heading'
+  | 'action'
+  | 'character'
+  | 'dialogue'
+  | 'parenthetical'
+  | 'transition'
+  | 'non-printable'
+  | 'lyrics';
 
 export interface ScriptLine {
   id: string;
@@ -35,6 +43,56 @@ export interface TitlePage {
   year?: string;
 }
 
+// ── Shotlist ──────────────────────────────────────────────────────────────────
+
+export type ShotColumnId =
+  | 'scene'
+  | 'shot'
+  | 'description'
+  | 'movement'
+  | 'shotType'
+  | 'lens'
+  | 'equipment'
+  | 'intExt'
+  | 'timeOfDay'
+  | 'notes';
+
+export interface ShotColumn {
+  id: ShotColumnId;
+  label: string;
+  width: number;
+  enabled: boolean;
+}
+
+export const DEFAULT_SHOT_COLUMNS: ShotColumn[] = [
+  { id: 'scene',       label: 'Scene',             width: 70,  enabled: true  },
+  { id: 'shot',        label: 'Shot',              width: 70,  enabled: true  },
+  { id: 'description', label: 'Shot Description',  width: 260, enabled: true  },
+  { id: 'movement',    label: 'Movement',          width: 130, enabled: true  },
+  { id: 'shotType',    label: 'Shot Type',         width: 110, enabled: true  },
+  { id: 'lens',        label: 'Lens',              width: 90,  enabled: false },
+  { id: 'equipment',   label: 'Special Equipment', width: 160, enabled: false },
+  { id: 'intExt',      label: 'Int/Ext',           width: 80,  enabled: false },
+  { id: 'timeOfDay',   label: 'Time of Day',       width: 110, enabled: false },
+  { id: 'notes',       label: 'Notes',             width: 180, enabled: false },
+];
+
+export interface Shot {
+  id: string;
+  sceneNumber: number;
+  shotNumber: number;
+  description: string;
+  movement: string;
+  shotType: string;
+  lens: string;
+  equipment: string;
+  intExt: string;
+  timeOfDay: string;
+  notes: string;
+}
+
+// ── Project ───────────────────────────────────────────────────────────────────
+
 export interface Project {
   id: string;
   name: string;
@@ -45,18 +103,20 @@ export interface Project {
   labels: Label[];
   tags: Tag[];
   showSceneNumbers: boolean;
+  shots: Shot[];
+  shotColumns: ShotColumn[];
 }
 
 export const DEFAULT_TAGS: Tag[] = [
-  { id: 'tag-1', name: 'Prop',     color: '#f59e0b', category: 'Props' },
-  { id: 'tag-2', name: 'Wardrobe', color: '#8b5cf6', category: 'Wardrobe' },
-  { id: 'tag-3', name: 'VFX',      color: '#06b6d4', category: 'VFX' },
-  { id: 'tag-4', name: 'SFX',      color: '#ef4444', category: 'Sound' },
+  { id: 'tag-1', name: 'Prop',     color: '#f59e0b', category: 'Props'     },
+  { id: 'tag-2', name: 'Wardrobe', color: '#8b5cf6', category: 'Wardrobe'  },
+  { id: 'tag-3', name: 'VFX',      color: '#06b6d4', category: 'VFX'       },
+  { id: 'tag-4', name: 'SFX',      color: '#ef4444', category: 'Sound'     },
   { id: 'tag-5', name: 'Location', color: '#22c55e', category: 'Locations' },
-  { id: 'tag-6', name: 'Cast',     color: '#ec4899', category: 'Cast' },
-  { id: 'tag-7', name: 'Vehicle',  color: '#f97316', category: 'Vehicles' },
-  { id: 'tag-8', name: 'Makeup',   color: '#a855f7', category: 'Makeup' },
-  { id: 'tag-9', name: 'Lighting', color: '#eab308', category: 'Lighting' },
+  { id: 'tag-6', name: 'Cast',     color: '#ec4899', category: 'Cast'      },
+  { id: 'tag-7', name: 'Vehicle',  color: '#f97316', category: 'Vehicles'  },
+  { id: 'tag-8', name: 'Makeup',   color: '#a855f7', category: 'Makeup'    },
+  { id: 'tag-9', name: 'Lighting', color: '#eab308', category: 'Lighting'  },
 ];
 
 export function createLine(type: LineType = 'action', text = ''): ScriptLine {
@@ -74,6 +134,24 @@ export function createProject(name: string): Project {
     labels: [],
     tags: [...DEFAULT_TAGS],
     showSceneNumbers: true,
+    shots: [],
+    shotColumns: [...DEFAULT_SHOT_COLUMNS],
+  };
+}
+
+export function createShot(sceneNumber: number, shotNumber: number): Shot {
+  return {
+    id: crypto.randomUUID(),
+    sceneNumber,
+    shotNumber,
+    description: '',
+    movement: '',
+    shotType: '',
+    lens: '',
+    equipment: '',
+    intExt: '',
+    timeOfDay: '',
+    notes: '',
   };
 }
 
@@ -103,11 +181,10 @@ export function getScenes(lines: ScriptLine[]): SceneInfo[] {
     if (line.type === 'scene-heading') {
       num++;
       const heading = line.text || `Scene ${num}`;
-      const match = heading.match(/^(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)\s*(.*?)(?:\s*-\s*(.*))?$/i);
-      const intExt = match?.[1]?.toUpperCase() || '';
-      const location = match?.[2]?.trim() || heading;
+      const match = heading.match(/^(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)\s*(.*?)(?:\s*[-–]\s*(.*))?$/i);
+      const intExt    = match?.[1]?.toUpperCase() || '';
+      const location  = match?.[2]?.trim() || heading;
       const timeOfDay = match?.[3]?.trim() || '';
-
       let firstLine = '';
       const characters: string[] = [];
       for (let j = i + 1; j < lines.length; j++) {
@@ -126,7 +203,6 @@ export function getScenes(lines: ScriptLine[]): SceneInfo[] {
   return scenes;
 }
 
-/** Collect all unique character names used in the script */
 export function getCharacterNames(lines: ScriptLine[]): string[] {
   const names = new Set<string>();
   lines.forEach(l => {

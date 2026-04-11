@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Project, LineType } from '@/types/screenplay';
 import { useProject } from '@/hooks/useProject';
 import { EditorToolbar } from './EditorToolbar';
@@ -11,45 +11,53 @@ import { SceneNavSidebar } from './SceneNavSidebar';
 import { LineTypeSidebar } from './LineTypeSidebar';
 import { ResizablePanel } from './ResizablePanel';
 import { SearchBar } from './SearchBar';
-import { exportToPDF, exportToFDX } from '@/lib/screenplayExport';
+import { ShotlistView } from './ShotlistView';
+import { ScriptPreviewDialog } from './ScriptPreviewDialog';
+import { exportToPDF, exportToFDX, exportToFountain, exportToDOCX } from '@/lib/screenplayExport';
+
+type EditorMode = 'script' | 'labelling' | 'shotlist';
 
 interface EditorWorkspaceProps {
   initialProject: Project;
   onBack: () => void;
+  onSave: (project: Project) => void;
 }
 
-export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps) {
+function estimateRuntimeSeconds(lines: Project['lines']): number {
+  const LINES_PER_PAGE = 26;
+  const printableLines = lines.filter(l => l.text.trim().length > 0 && l.type !== 'non-printable').length;
+  const pages = printableLines / LINES_PER_PAGE;
+  return Math.max(60, Math.round(pages * 60 * 0.93));
+}
+
+export function EditorWorkspace({ initialProject, onBack, onSave }: EditorWorkspaceProps) {
   const {
     project,
-    updateLine,
-    insertLineAfter,
-    removeLine,
-    addLabel,
-    removeLabel,
-    addTag,
-    updateTag,
-    removeTag,
-    updateTitlePage,
-    toggleSceneNumbers,
+    updateLine, insertLineAfter, removeLine,
+    addLabel, removeLabel,
+    addTag, updateTag, removeTag,
+    updateTitlePage, toggleSceneNumbers,
+    addShot, updateShot, removeShot, updateShotColumns,
   } = useProject(initialProject);
 
-  const [mode, setMode] = useState<'script' | 'labelling'>('script');
-  const [focusLineId, setFocusLineId] = useState<string | null>(null);
+  const [mode, setMode]                       = useState<EditorMode>('script');
+  const [focusLineId, setFocusLineId]         = useState<string | null>(null);
   const [currentLineType, setCurrentLineType] = useState<LineType>('action');
-  const [showTitlePage, setShowTitlePage] = useState(false);
-  const [showSceneNav, setShowSceneNav] = useState(true);
-  const [showLineTypes, setShowLineTypes] = useState(true);
-  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [showTitlePage, setShowTitlePage]     = useState(false);
+  const [showSceneNav, setShowSceneNav]       = useState(true);
+  const [showLineTypes, setShowLineTypes]     = useState(true);
+  const [showBreakdown, setShowBreakdown]     = useState(true);
   const [highlightLineId, setHighlightLineId] = useState<string | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen]           = useState(false);
+  const [previewOpen, setPreviewOpen]         = useState(false);
 
-  // Ctrl+F
+  const runtimeSeconds = useMemo(() => estimateRuntimeSeconds(project.lines), [project.lines]);
+
+  useEffect(() => { onSave(project); }, [project]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        setSearchOpen(v => !v);
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setSearchOpen(v => !v); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -70,22 +78,49 @@ export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps
     setTimeout(() => setHighlightLineId(null), 1500);
   }, []);
 
+  const toolbar = (
+    <EditorToolbar
+      currentLineType={currentLineType}
+      mode={mode}
+      onModeChange={m => setMode(m as EditorMode)}
+      showSceneNumbers={project.showSceneNumbers}
+      onToggleSceneNumbers={toggleSceneNumbers}
+      onTitlePage={() => setShowTitlePage(true)}
+      onExportPDF={() => exportToPDF(project)}
+      onExportFDX={() => exportToFDX(project)}
+      onExportFountain={() => exportToFountain(project)}
+      onExportDOCX={() => exportToDOCX(project)}
+      onPreview={() => setPreviewOpen(true)}
+      projectName={project.name}
+      searchOpen={searchOpen}
+      onToggleSearch={() => setSearchOpen(v => !v)}
+      pageCount={runtimeSeconds}
+    />
+  );
+
+  if (mode === 'shotlist') {
+    return (
+      <div className="h-full flex flex-col bg-background">
+        {toolbar}
+        <ShotlistView
+          lines={project.lines}
+          shots={project.shots ?? []}
+          shotColumns={project.shotColumns ?? []}
+          onAddShot={addShot}
+          onUpdateShot={updateShot}
+          onRemoveShot={removeShot}
+          onUpdateColumns={updateShotColumns}
+        />
+        <TitlePageDialog open={showTitlePage} onOpenChange={setShowTitlePage}
+          titlePage={project.titlePage} onUpdate={updateTitlePage} />
+        <ScriptPreviewDialog open={previewOpen} onClose={() => setPreviewOpen(false)} project={project} />
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <EditorToolbar
-        currentLineType={currentLineType}
-        mode={mode}
-        onModeChange={setMode}
-        showSceneNumbers={project.showSceneNumbers}
-        onToggleSceneNumbers={toggleSceneNumbers}
-        onBack={onBack}
-        onTitlePage={() => setShowTitlePage(true)}
-        onExportPDF={() => exportToPDF(project)}
-        onExportFDX={() => exportToFDX(project)}
-        projectName={project.name}
-        searchOpen={searchOpen}
-        onToggleSearch={() => setSearchOpen(v => !v)}
-      />
+    <div className="h-full flex flex-col bg-background">
+      {toolbar}
 
       <SearchBar
         lines={project.lines}
@@ -104,17 +139,9 @@ export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* ── Left: scene nav ── */}
-        <ResizablePanel
-          defaultWidth={260}
-          minWidth={40}
-          maxWidth={400}
-          side="left"
-          isOpen={showSceneNav}
-          storageKey="scriptsmith-left-width"
-        >
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <ResizablePanel defaultWidth={300} minWidth={40} maxWidth={500}
+          side="left" isOpen={showSceneNav} storageKey="scriptsmith-left-width">
           <SceneNavSidebar
             lines={project.lines}
             onScrollToScene={handleScrollToLine}
@@ -123,7 +150,6 @@ export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps
           />
         </ResizablePanel>
 
-        {/* ── Centre ── */}
         {mode === 'script' ? (
           <ScriptEditor
             lines={project.lines}
@@ -148,16 +174,9 @@ export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps
           />
         )}
 
-        {/* ── Right: line types (script) or breakdown (labelling) ── */}
         {mode === 'script' ? (
-          <ResizablePanel
-            defaultWidth={200}
-            minWidth={40}
-            maxWidth={360}
-            side="right"
-            isOpen={showLineTypes}
-            storageKey="scriptsmith-right-script-width"
-          >
+          <ResizablePanel defaultWidth={200} minWidth={40} maxWidth={360}
+            side="right" isOpen={showLineTypes} storageKey="scriptsmith-right-script-width">
             <LineTypeSidebar
               currentLineType={currentLineType}
               onChangeLineType={handleChangeLineType}
@@ -167,15 +186,9 @@ export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps
           </ResizablePanel>
         ) : (
           showBreakdown && (
-            <ResizablePanel
-              defaultWidth={300}
-              minWidth={200}
-              maxWidth={500}
-              side="right"
-              isOpen={showBreakdown}
-              storageKey="scriptsmith-right-label-width"
-              className="border-l border-border bg-breakdown-bg"
-            >
+            <ResizablePanel defaultWidth={300} minWidth={200} maxWidth={480}
+              side="right" isOpen={showBreakdown} storageKey="scriptsmith-right-label-width"
+              className="border-l border-border bg-breakdown-bg">
               <BreakdownPanel
                 lines={project.lines}
                 labels={project.labels}
@@ -188,12 +201,10 @@ export function EditorWorkspace({ initialProject, onBack }: EditorWorkspaceProps
         )}
       </div>
 
-      <TitlePageDialog
-        open={showTitlePage}
-        onOpenChange={setShowTitlePage}
-        titlePage={project.titlePage}
-        onUpdate={updateTitlePage}
-      />
+      <TitlePageDialog open={showTitlePage} onOpenChange={setShowTitlePage}
+        titlePage={project.titlePage} onUpdate={updateTitlePage} />
+
+      <ScriptPreviewDialog open={previewOpen} onClose={() => setPreviewOpen(false)} project={project} />
     </div>
   );
 }
