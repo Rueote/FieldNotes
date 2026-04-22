@@ -96,10 +96,12 @@
     --chart-5: oklch(0.269 0 0);
     --sidebar: oklch(0.205 0 0);
   }
+
   .theme {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
   }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -144,44 +146,58 @@
   color: inherit;
   display: block;
   box-sizing: border-box;
+  /* Allow cross-line selection by not blocking pointer events */
+  user-select: text;
 }
 
-/* No placeholder on any line — user knows what they're doing */
 .screenplay-line::placeholder {
   color: transparent;
 }
 
-/* ── Scene heading: always white/inherit, never blue ── */
+/* ── Scene heading ── */
 .screenplay-line.scene-heading {
   text-transform: uppercase;
   font-weight: bold;
   margin-top: 2em;
-  /* colour set by paper text via theme, not overridden here */
 }
 
+/* ── Action ── */
 .screenplay-line.action {
   margin-top: 1em;
 }
 
-/* ── Character: 37% from left margin (2.2in of 6in usable) ── */
+/* ── Character ──
+   Industry standard: character name starts at 3.7in from page left edge.
+   Page left margin is 1.5in, so character indent from text area = 2.2in.
+   As a percentage of the 6in text column: 2.2/6 = 36.7% ≈ 37%
+*/
 .screenplay-line.character {
   text-transform: uppercase;
   margin-top: 1em;
-  padding-left: 37%;
+  padding-left: 2.2in;
   padding-right: 0;
   text-align: left;
 }
 
-/* ── Dialogue: centred block 25%/25% ── */
+/* ── Dialogue ──
+   Industry standard:
+     Left edge:  2.5in from page left = 1.0in from text area left
+     Right edge: 6.0in from page left = 1.0in from text area right
+   This gives a 2.5in wide dialogue column — matching Scenarist/FD exactly.
+   Previous value of 25%/25% was too wide (1.5in each side).
+*/
 .screenplay-line.dialogue {
-  padding-left: 25%;
-  padding-right: 25%;
+  padding-left: 1.0in;
+  padding-right: 1.5in;
 }
 
-/* ── Parenthetical ── */
+/* ── Parenthetical ──
+   Slightly narrower than dialogue, standard is ~3.1in left / 4.5in right from page.
+   From text area: 1.6in left, 2.0in right.
+*/
 .screenplay-line.parenthetical {
-  padding-left: 27%;
-  padding-right: 32%;
+  padding-left: 1.6in;
+  padding-right: 2.0in;
 }
 
 /* ── Transition ── */
@@ -201,8 +217,8 @@
 /* ── Lyrics ── */
 .screenplay-line.lyrics {
   font-style: italic;
-  padding-left: 15%;
-  padding-right: 15%;
+  padding-left: 0.5in;
+  padding-right: 0.5in;
   margin-top: 0.5em;
 }
 

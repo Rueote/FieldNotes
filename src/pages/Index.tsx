@@ -2,30 +2,32 @@ import { useState } from 'react';
 import { Project } from '@/types/screenplay';
 import { useProjectList } from '@/hooks/useProject';
 import { useUsageTime } from '@/hooks/useUsageTime';
+
 import { HomeScreen } from '@/components/screenplay/HomeScreen';
 import { EditorWorkspace } from '@/components/screenplay/EditorWorkspace';
-import { ResearchBoard } from '@/components/screenplay/ResearchBoard';
+import { DocumentsTab } from '@/components/screenplay/DocumentsTab';
 import { CollabView } from '@/components/screenplay/CollabView';
 import { SettingsPanel } from '@/components/screenplay/SettingsPanel';
-import { Home, FlaskConical, FileText, Users, Settings } from 'lucide-react';
+
+import { Home, FolderOpen, FileText, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type Tab = 'start' | 'research' | 'script' | 'collab' | 'settings';
+type Tab = 'start' | 'documents' | 'script' | 'collab' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'start',    label: 'Start',    icon: <Home className="w-4 h-4" /> },
-  { id: 'research', label: 'Research', icon: <FlaskConical className="w-4 h-4" /> },
-  { id: 'script',   label: 'Script',   icon: <FileText className="w-4 h-4" /> },
-  { id: 'collab',   label: 'Collab',   icon: <Users className="w-4 h-4" /> },
-  { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
+  { id: 'start',     label: 'Start',     icon: <Home      className="w-4 h-4" /> },
+  { id: 'documents', label: 'Documents', icon: <FolderOpen className="w-4 h-4" /> },
+  { id: 'script',    label: 'Script',    icon: <FileText  className="w-4 h-4" /> },
+  { id: 'collab',    label: 'Collab',    icon: <Users     className="w-4 h-4" /> },
+  { id: 'settings',  label: 'Settings',  icon: <Settings  className="w-4 h-4" /> },
 ];
 
 export default function Index() {
   const { projects, addProject, deleteProject, saveProject } = useProjectList();
+
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [tab, setTab] = useState<Tab>('start');
 
-  // Always running — not inside SettingsPanel so it ticks regardless of active tab
   const { totalSeconds, reset: resetTime } = useUsageTime();
 
   const handleOpenProject = (project: Project) => {
@@ -42,6 +44,8 @@ export default function Index() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
+
+      {/* ── Main content ── */}
       <div className="flex-1 overflow-hidden">
         {tab === 'start' && (
           <HomeScreen
@@ -52,9 +56,11 @@ export default function Index() {
             onImportProject={saveProject}
           />
         )}
-        {tab === 'research' && (
-          <ResearchBoard project={activeProject} />
+
+        {tab === 'documents' && (
+          <DocumentsTab project={activeProject} />
         )}
+
         {tab === 'script' && (
           activeProject ? (
             <EditorWorkspace
@@ -66,7 +72,9 @@ export default function Index() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
               <FileText className="w-10 h-10 opacity-30" />
-              <p className="text-sm">No project open — go to Start to open or create one</p>
+              <p className="text-sm">
+                No project open — go to Start to open or create one
+              </p>
               <button
                 className="text-xs underline underline-offset-2 opacity-60 hover:opacity-100 transition-opacity"
                 onClick={() => setTab('start')}
@@ -76,12 +84,18 @@ export default function Index() {
             </div>
           )
         )}
+
         {tab === 'collab' && <CollabView />}
+
         {tab === 'settings' && (
-          <SettingsPanel totalSeconds={totalSeconds} onResetTime={resetTime} />
+          <SettingsPanel
+            totalSeconds={totalSeconds}
+            onResetTime={resetTime}
+          />
         )}
       </div>
 
+      {/* ── Bottom navigation ── */}
       <div className="shrink-0 h-10 bg-[#1a1a1e] border-t border-white/10 flex items-stretch">
         {TABS.map(t => (
           <button

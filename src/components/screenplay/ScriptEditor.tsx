@@ -25,10 +25,10 @@ function computePageBreaks(lines: ScriptLine[]): Set<number> {
     let rows = 1;
     if (line.text) {
       const charsPerRow =
-        line.type === 'dialogue'      ? 35 :
+        line.type === 'dialogue'      ? 45 :
         line.type === 'character'     ? 38 :
-        line.type === 'parenthetical' ? 28 :
-        line.type === 'lyrics'        ? 45 : 60;
+        line.type === 'parenthetical' ? 30 :
+        line.type === 'lyrics'        ? 55 : 60;
       rows = Math.max(1, Math.ceil(line.text.length / charsPerRow));
     }
     if (line.type === 'scene-heading') lineCount += 2;
@@ -42,7 +42,6 @@ function computePageBreaks(lines: ScriptLine[]): Set<number> {
   return breaks;
 }
 
-// Scene heading INT./EXT. prefix completions
 const SCENE_PREFIXES = ['INT. ', 'EXT. ', 'INT./EXT. ', 'I/E. '];
 
 function getSceneCompletion(text: string): string | null {
@@ -55,16 +54,11 @@ function getSceneCompletion(text: string): string | null {
   return null;
 }
 
-// After typing INT. LOCATION, Tab should append ' - ' for time of day
-// Returns the text to insert, or null if not applicable
 function getLocationDashCompletion(text: string): string | null {
   const upper = text.toUpperCase();
-  // Must start with a known prefix and have content after it (the location)
-  // and NOT already have a dash
   const hasPrefix = SCENE_PREFIXES.some(p => upper.startsWith(p.trim()));
   if (!hasPrefix) return null;
   if (upper.includes(' - ') || upper.includes(' — ')) return null;
-  // Must have something after the prefix (i.e. location started)
   const afterPrefix = SCENE_PREFIXES.reduce((rem, p) => {
     if (upper.startsWith(p.trim())) return text.slice(p.trim().length).trimStart();
     return rem;
@@ -83,7 +77,6 @@ export function ScriptEditor({
   const lineRefs      = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const [focusCursorPos, setFocusCursorPos] = useState<number | null>(null);
   const [charSuggest, setCharSuggest]       = useState<{ lineId: string; suggestion: string } | null>(null);
-  // Ghost text state for scene heading Tab preview
   const [sceneGhost, setSceneGhost]         = useState<{ lineId: string; ghost: string } | null>(null);
 
   const autoResize = useCallback((el: HTMLTextAreaElement) => {
@@ -111,6 +104,45 @@ export function ScriptEditor({
     lineRefs.current.forEach(el => autoResize(el));
   }, [lines.length, autoResize]);
 
+  // ── Ctrl+A: select all text across all lines ─────────────────────────────────
+  // Strategy: build a full plain-text representation, put it on the clipboard
+  // selection model, and visually select-all in the currently focused textarea.
+  // True cross-textarea DOM selection isn't possible, but we select all in the
+  // active textarea AND copy the full script to the clipboard selection so
+  // Ctrl+C after Ctrl+A gives the whole script.
+  useEffect(() => {
+    const handler = (e: globalThis.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        // Only intercept if focus is inside our editor
+        const active = document.activeElement;
+        if (!active) return;
+        let inside = false;
+        lineRefs.current.forEach(el => { if (el === active) inside = true; });
+        if (!inside) return;
+
+        e.preventDefault();
+
+        // Select all text in every textarea visually
+        lineRefs.current.forEach(el => {
+          el.setSelectionRange(0, el.value.length);
+        });
+
+        // Also select-all in the focused one (brings it to front of browser selection)
+        const focused = active as HTMLTextAreaElement;
+        focused.setSelectionRange(0, focused.value.length);
+
+        // Put the full script text in clipboard so Ctrl+C works as expected
+        const fullText = lines
+          .filter(l => l.type !== 'non-printable')
+          .map(l => l.text)
+          .join('\n');
+        navigator.clipboard.writeText(fullText).catch(() => {});
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lines]);
+
   const getNextLineType = useCallback((currentType: LineType): LineType => {
     switch (currentType) {
       case 'character':     return 'dialogue';
@@ -125,28 +157,25 @@ export function ScriptEditor({
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>, line: ScriptLine, index: number) => {
     const el = e.currentTarget;
 
-    // Ctrl+B / Ctrl+I
     if (e.ctrlKey && e.key === 'b') { e.preventDefault(); onUpdateLine(line.id, { bold: !line.bold }); return; }
     if (e.ctrlKey && e.key === 'i') { e.preventDefault(); onUpdateLine(line.id, { italic: !line.italic }); return; }
 
-    // Ctrl+1–8 line type
     if (e.ctrlKey && e.key >= '1' && e.key <= '8') {
       e.preventDefault();
       const types: LineType[] = ['scene-heading','action','character','dialogue','parenthetical','transition','non-printable','lyrics'];
-      const newType = types[parseInt(e.key) - 1];
-      onUpdateLine(line.id, { type: newType });
-      onLineTypeChange(newType);
+      onUpdateLine(line.id, { type: types[parseInt(e.key) - 1] });
+      onLineTypeChange(types[parseInt(e.key) - 1]);
       return;
     }
 
     if (e.ctrlKey && (e.key === 'z' || e.key === 'y')) return;
+    // Let Ctrl+A bubble up to our global handler above
+    if (e.ctrlKey && e.key === 'a') return;
 
-    // ── Tab ──────────────────────────────────────────────────────────
     if (e.key === 'Tab') {
       e.preventDefault();
 
       if (line.type === 'scene-heading') {
-        // Priority 1: INT./EXT. prefix completion
         const prefixCompletion = getSceneCompletion(el.value);
         if (prefixCompletion) {
           onUpdateLine(line.id, { text: prefixCompletion });
@@ -157,7 +186,6 @@ export function ScriptEditor({
           }, 0);
           return;
         }
-        // Priority 2: append ' - ' for time of day after location
         const dashCompletion = getLocationDashCompletion(el.value);
         if (dashCompletion) {
           onUpdateLine(line.id, { text: dashCompletion });
@@ -170,7 +198,6 @@ export function ScriptEditor({
         }
       }
 
-      // Accept char suggestion
       if (line.type === 'character' && charSuggest?.lineId === line.id) {
         onUpdateLine(line.id, { text: charSuggest.suggestion });
         setCharSuggest(null);
@@ -181,14 +208,12 @@ export function ScriptEditor({
         return;
       }
 
-      // Action → character on Tab
       if (line.type === 'action' && !e.shiftKey) {
         onUpdateLine(line.id, { type: 'character' });
         onLineTypeChange('character');
         return;
       }
 
-      // Cycle types
       const typeOrder: LineType[] = ['action','scene-heading','character','dialogue','parenthetical','transition','non-printable','lyrics'];
       const ci = typeOrder.indexOf(line.type);
       const ni = e.shiftKey ? (ci - 1 + typeOrder.length) % typeOrder.length : (ci + 1) % typeOrder.length;
@@ -197,7 +222,6 @@ export function ScriptEditor({
       return;
     }
 
-    // ── Enter ─────────────────────────────────────────────────────────
     if (e.key === 'Enter') {
       e.preventDefault();
       setCharSuggest(null);
@@ -207,7 +231,6 @@ export function ScriptEditor({
       const beforeCursor = el.value.substring(0, cursorPos);
       const afterCursor  = el.value.substring(cursorPos);
 
-      // Empty action line → pressing Enter again converts it to scene-heading
       if (line.type === 'action' && !el.value.trim()) {
         onUpdateLine(line.id, { type: 'scene-heading' });
         onLineTypeChange('scene-heading');
@@ -226,7 +249,6 @@ export function ScriptEditor({
       return;
     }
 
-    // ── Backspace at start: merge with prev ──────────────────────────
     if (e.key === 'Backspace') {
       setCharSuggest(null);
       setSceneGhost(null);
@@ -262,7 +284,6 @@ export function ScriptEditor({
     onUpdateLine(line.id, { text });
     autoResize(e.target);
 
-    // Character autocomplete ghost
     if (line.type === 'character' && text.trim().length >= 1) {
       const knownNames = getCharacterNames(lines);
       const upper = text.toUpperCase();
@@ -272,11 +293,9 @@ export function ScriptEditor({
       setCharSuggest(null);
     }
 
-    // Scene heading ghost — show what Tab will do
     if (line.type === 'scene-heading' && text.trim()) {
       const prefixGhost = getSceneCompletion(text);
       if (prefixGhost) {
-        // Ghost shows the remaining prefix characters
         setSceneGhost({ lineId: line.id, ghost: prefixGhost.slice(text.length) });
         return;
       }
@@ -295,8 +314,8 @@ export function ScriptEditor({
   }, [autoResize]);
 
   const pageBreaks = computePageBreaks(lines);
-  let sceneCount  = 0;
-  let pageNumber  = 1;
+  let sceneCount   = 0;
+  let pageNumber   = 1;
 
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto custom-scrollbar bg-editor-bg">
@@ -307,16 +326,12 @@ export function ScriptEditor({
           const hasBreakBefore = pageBreaks.has(i);
           if (hasBreakBefore) pageNumber++;
 
-          // Character ghost
-          const charSug  = charSuggest?.lineId === line.id ? charSuggest.suggestion : null;
+          const charSug   = charSuggest?.lineId === line.id ? charSuggest.suggestion : null;
           const charGhost = charSug && line.text ? charSug.slice(line.text.length) : null;
-
-          // Scene heading ghost
-          const scGhost = sceneGhost?.lineId === line.id ? sceneGhost.ghost : null;
+          const scGhost   = sceneGhost?.lineId === line.id ? sceneGhost.ghost : null;
 
           return (
             <div key={line.id}>
-              {/* Page break indicator */}
               {hasBreakBefore && (
                 <div className="relative select-none" style={{ margin: '2em 0', height: 24 }} aria-hidden>
                   <div style={{ position: 'absolute', top: '50%', left: '-1.5in', right: '-1in', borderTop: '2px dashed rgba(128,128,128,0.35)' }} />
@@ -330,7 +345,6 @@ export function ScriptEditor({
                 className={cn('relative group', isHighlighted && 'animate-flash-highlight')}
                 data-line-id={line.id}
               >
-                {/* Scene number — only when showSceneNumbers is true */}
                 {showSceneNumbers && line.type === 'scene-heading' && (
                   <span
                     className="absolute top-0 text-xs text-muted-foreground font-mono select-none"
@@ -354,7 +368,6 @@ export function ScriptEditor({
                   />
                 ) : (
                   <div className="relative">
-                    {/* Character name ghost text */}
                     {charGhost && (
                       <div aria-hidden className={cn('screenplay-line', line.type)}
                         style={{ position: 'absolute', top: 0, left: 0, right: 0, pointerEvents: 'none', color: 'transparent', userSelect: 'none' }}>
@@ -363,7 +376,6 @@ export function ScriptEditor({
                       </div>
                     )}
 
-                    {/* Scene heading ghost text (Tab preview) */}
                     {scGhost && line.type === 'scene-heading' && (
                       <div aria-hidden className={cn('screenplay-line scene-heading')}
                         style={{ position: 'absolute', top: 0, left: 0, right: 0, pointerEvents: 'none', userSelect: 'none' }}>

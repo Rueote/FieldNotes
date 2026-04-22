@@ -1,28 +1,15 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "fieldnotes",
   "private": true,
-  "version": "0.0.0",
-  "main": "electron/main.cjs",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder"
-  },
-  "build": {
-    "appId": "com.fieldnotes.app",
-    "productName": "Fieldnotes",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "win": {
-      "target": "nsis"
-    }
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
@@ -56,6 +43,8 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@tanstack/react-query": "^5.83.0",
     "@tauri-apps/api": "^2.10.1",
+    "baseline-browser-mapping": "^2.10.19",
+    "caniuse-lite": "^1.0.30001788",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -82,16 +71,12 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
-    "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
-    "electron": "^41.2.0",
-    "electron-builder": "^26.8.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
-    "vite": "^5.4.19",
-    "wait-on": "^9.0.5"
+    "vite": "^5.4.19"
   }
 }

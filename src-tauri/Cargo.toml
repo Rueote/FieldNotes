@@ -1,14 +1,12 @@
 [package]
 name = "app"
 version = "0.1.1"
-description = "A Tauri App"
-authors = ["you"]
+description = "FieldNotes - Screenplay Editor"
+authors = ["Rueote"]
 license = ""
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 name = "app_lib"
@@ -21,5 +19,32 @@ tauri-build = { version = "2.5.6", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.10.3", features = [] }
-tauri-plugin-log = "2"
+
+# Only enable the Tauri features you actually use.
+# Every unused feature adds compile time.
+tauri = { version = "2.10.3", features = [   # needed for loading local assets in production
+] }
+
+tauri-plugin-log = { version = "2", default-features = false }
+
+# ── Profile overrides ──────────────────────────────────────────────────────────
+# Dev: fastest possible compile, not worried about runtime speed
+[profile.dev]
+opt-level = 0
+debug = true
+incremental = true
+codegen-units = 256
+split-debuginfo = "unpacked"
+
+# Give dependencies a small opt-level so the UI doesn't feel slow in dev
+[profile.dev.package."*"]
+opt-level = 1
+codegen-units = 16
+
+# Release: optimise for small binary size
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"

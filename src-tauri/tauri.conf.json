@@ -5,7 +5,7 @@
   "identifier": "com.fieldnotes.app",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:8080",
+    "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -17,7 +17,7 @@
         "height": 800,
         "resizable": true,
         "fullscreen": false,
-	"maximized": true
+        "maximized": true
       }
     ],
     "security": {
